@@ -16,8 +16,17 @@ class bugs(commands.Cog):
     
     def __init__(self, bot):
         self.bot = bot
-        self.helpstring.append('')
+        self.helpstring.append('!!trends ; gives insight into the market')
+        self.helpstring.append('!!showMarket ; shows pretty graph')
+        self.helpstring.append('!!openAccount ; become an investor') 
+        self.helpstring.append('!!showInvestors ; shows everyones money')
         self.helpstring.append('') 
+        self.helpstring.append('') 
+        self.helpstring.append('') 
+        self.helpstring.append('') 
+        self.helpstring.append('') 
+        self.helpstring.append('') 
+
         self.stockMarket = stock_engine()
 
     @commands.command(pass_context=True)
@@ -171,6 +180,10 @@ class stock_engine():
 
     async def updateMarket(self):
         while self.running:
+            if self.tick % self.config['ticks'] * 60 * 60 == 0:  # Save every hour... probably
+                self.save()
+                self.startMarket()
+
             await asyncio.sleep(60 / int(self.config['ticks']))
             if random.randint(0,100) < self.MARKET_VOLATILENESS:
                 rfactor = 1 if (random.randint(0,100) > 50 * (1 + 16*(self.marketGrowthFactor * abs(self.marketGrowthFactor)))) else -1 
