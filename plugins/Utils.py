@@ -6,6 +6,7 @@ import random
 import shutil
 from insults import insult
 
+
 class Utils(commands.Cog):
     helpstring = []
     helpEmoji = '🔧'
@@ -46,10 +47,18 @@ class Utils(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member):
         chn = self.bot.get_channel(704901570617409600)
+        gld = self.bot.get_guild(704901570617409597)
         if member.guild.id == 704901570617409597:
             await chn.send(f'Welcome {member.mention}. {insult()}')
-            role = discord.utils.get(guild.roles, name='Citizen')
-            await mem.add_roles(role)
+            role = discord.utils.get(gld.roles, name='Citizen')
+            await member.add_roles(role)
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        chn = self.bot.get_channel(704901570617409600)
+        if member.guild.id == 704901570617409597:
+            await chn.send(f'Get the _fuck_ out of here {member.mention}. {insult()}')
+
 
     @commands.command(pass_context=True)
     async def role(self, ctx, emoji, role, msg=0):
