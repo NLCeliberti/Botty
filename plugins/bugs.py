@@ -6,6 +6,7 @@ import asyncio
 import pandas
 import random
 import matplotlib
+import os
 
 class bugs(commands.Cog):
     helpstring = []
@@ -21,8 +22,8 @@ class bugs(commands.Cog):
 
     @commands.command(pass_context=True)
     async def trends(self, ctx):
-        out = await self.stockMarket.showTrends()
-        await ctx.channel.send(out)
+        rtn = await self.stockMarket.showTrends()
+        await ctx.channel.send(rtn)
 
     @commands.command(pass_context=True)
     async def configMarket(self, ctx, key, value):
@@ -39,17 +40,25 @@ class bugs(commands.Cog):
 
     @commands.command(pass_context=True)
     async def showMarket(self, ctx, stock='all', time=0):
-        out = await self.stockMarket.showMarket(stock, time)
-        if 'error' in out:
-            await ctx.channel.send(out['error'])
-            return
-        await ctx.channel.send(out['msg'], file=discord.File(out['graph']))
+        rtn = await self.stockMarket.showMarket(stock, time)
+        if 'error' in rtn:
+            await ctx.channel.send(rtn['error'])
+        else:
+            await ctx.channel.send(rtn['msg'], file=discord.File(rtn['graph']))
 
     @commands.command(pass_context=True)
     async def showInvestors(self, ctx):
-        out = await self.stockMarket.showInvestors()
-        await ctx.channel.send(out)
+        rtn = await self.stockMarket.showInvestors()
+        await ctx.channel.send(rtn)
     
+    @commands.command(pass_context=True)
+    async def showHoldings(self, ctx):
+        rtn = await self.stockMarket.showHoldings(ctx.author.id)
+        if 'error' in rtn:
+            await ctx.channel.send(rtn['error'])
+        else:
+            await ctx.author.send(rtn['msg'])
+
     @commands.command(pass_context=True)
     async def s(self, ctx):
         await self.stockMarket.save()
@@ -59,14 +68,59 @@ class bugs(commands.Cog):
     @commands.command(pass_context=True)
     async def openAccount(self, ctx):
         rtn = await self.stockMarket.openAccount(ctx.author.name, ctx.author.id)
-        if rtn:
+        if 'error' in rtn:
             await ctx.channel.send(rtn['error'])
         else:
             await ctx.channel.send('Welcome Investor!')
 
     @commands.command(pass_context=True)
-    async def buy(self, ctx, stock, amount):
-        pass
+    async def buy(self, ctx, stock, amount:int):
+        rtn = await self.stockMarket.buy(ctx.author.id, stock.upper(), amount)
+        if 'error' in rtn:
+            await ctx.channel.send(rtn['error'])
+        else:
+            await ctx.channel.send(rtn['msg'])
+
+    @commands.command(pass_context=True)
+    async def sell(self, ctx, stock, amount):
+        rtn = await self.stockMarket.sell(ctx.author.id, stock.upper(), amount)
+        if 'error' in rtn:
+            await ctx.channel.send(rtn['error'])
+        else:
+            await ctx.channel.send(rtn['msg'])
+
+    @commands.command(pass_context=True)
+    async def limitBuy(self, ctx, stock, amount:int, limit:float):
+        rtn = await self.stockMarket.limitBuy(ctx.author.id, stock.upper(), amount, limit)
+        if 'error' in rtn:
+            await ctx.channel.send(rtn['error'])
+        else:
+            await ctx.channel.send(rtn['msg'])
+
+    @commands.command(pass_context=True)
+    async def limitSell(self, ctx, stock, amount, limit:float):
+        rtn = await self.stockMarket.limitSell(ctx.author.id, stock.upper(), amount, limit)
+        if 'error' in rtn:
+            await ctx.channel.send(rtn['error'])
+        else:
+            await ctx.channel.send(rtn['msg'])
+
+    @commands.command(pass_context=True)
+    async def showLimits(self, ctx):
+        rtn = await self.stockMarket.showLimits(ctx.author.id)
+        if 'error' in rtn:
+            await ctx.channel.send(rtn['error'])
+        else:
+            await ctx.channel.send(rtn['msg'])
+
+    @commands.command(pass_context=True)
+    async def cancelLimit(self, ctx, index:int):
+        rtn = await self.stockMarket.cancelLimit(ctx.author.id, index)
+        if 'error' in rtn:
+            await ctx.channel.send(rtn['error'])
+        else:
+            await ctx.channel.send(f"Removed limit {rtn['type']} for {rtn['amount']} shares of {rtn['stock']}")
+
 
 RISK_LOWER = 40
 RISK_UPPER = 50
@@ -79,7 +133,7 @@ class stock_engine():
     running = False
     marketGrowthFactor = None  # between -1 and 1
     config = None
-    stocks = []
+    stocks = {}
     investors = {}
     tick = 0
     
@@ -88,19 +142,23 @@ class stock_engine():
         self.marketGrowthFactor = .1
 
         if PERSISTENT:
-            with open(self.STOCK_SAVE_FP, 'r') as f:
-                data = f.readline().strip().split('|')
-                self.tick = int(data[0])
-                self.marketGrowthFactor = float(data[1])
-                for line in f.readlines():
-                    data = line.strip().split('|')
-                    if data[0] == 'stock':
-                        self.stocks.append(stock(data[1], data[2], float(data[3]), int(data[4]), data[5]))
-                    elif data[0] == 'investor':
-                        self.investors[int(data[2])] = investor(data[1], int(data[2]), data[3], int(data[4]), data[5])
+            if os.path.exists(STOCK_SAVE_FP):
+                with open(self.STOCK_SAVE_FP, 'r') as f:
+                    data = f.readline().strip().split('|')
+                    self.tick = int(data[0])
+                    self.marketGrowthFactor = float(data[1])
+                    for line in f.readlines():
+                        data = line.strip().split('|')
+                        if data[0] == 'stock':
+                            self.stocks[data[2]] = stock(data[1], data[2], float(data[3]), int(data[4]), data[5])
+                        elif data[0] == 'investor':
+                            self.investors[int(data[2])] = investor(data[1], int(data[2]), float(data[3]), data[4], data[5], data[6], data[7])
+            else:
+                for sts, st in self.STOCKS.items():
+                    self.stocks[sts] = stock(st, sts, random.randint(20,40), random.randint(RISK_LOWER, RISK_UPPER))
         else:
             for sts, st in self.STOCKS.items():
-                self.stocks.append(stock(st, sts, random.randint(20,40), random.randint(RISK_LOWER, RISK_UPPER)))
+                self.stocks[sts] = stock(st, sts, random.randint(20,40), random.randint(RISK_LOWER, RISK_UPPER))
 
     async def startMarket(self):
         if not self.running:
@@ -119,14 +177,30 @@ class stock_engine():
                 self.marketGrowthFactor += rfactor * random.randint(1,3) * .01
                 print(self.marketGrowthFactor)
             self.tick += 1
-            for st in self.stocks:
+            for st in self.stocks.values():
                 st.updatePrice(self.tick, self.marketGrowthFactor)
+
+            for inv in self.investors.values():
+                for lim in inv.limits:
+                    if lim['type'] == 'buy':
+                        if self.stocks[lim['stock']].price <= lim['limit']:
+                            inv.buy(lim['stock'], lim['amount'], lim['limit'])
+                            inv.limits.remove(lim)
+                    else:
+                        if self.stocks[lim['stock']].price >= lim['limit']:
+                            inv.buy(lim['stock'], lim['amount'], lim['limit'])
+                            inv.limits.remove(lim)
+                stocksPrice = 0
+                for stk in inv.portfolio:
+                    stocksPrice += self.stocks[stk].price * inv.portfolio[stk]
+                inv.update(self.tick, stocksPrice)
+            
 
     async def showTrends(self):
         msg = []
         msg.append('```ini\n')
         msg.append(f'MGF: {self.marketGrowthFactor:.2f}')
-        for st in self.stocks:
+        for st in self.stocks.values():
             msg.append(f'[{st.short_name:3}] ${st.price:4.2f} {st.riskFactor}')
         msg.append('\n```')
 
@@ -135,8 +209,12 @@ class stock_engine():
     async def showInvestors(self):
         msg = []
         msg.append('```ini\n')
-        for inv in list(self.investors.values()):
-            msg.append(f'[{inv.name}] ${inv.money:4.2f}')
+
+        for inv in self.investors.values():
+            stocks = 0
+            for stk in inv.portfolio:
+                stocks += self.stocks[stk].price * inv.portfolio[stk]
+            msg.append(f'[{inv.name}] Cash ${inv.money:.2f} Stocks ${stocks:.2f}')
         msg.append('\n```')
 
         return '\n'.join(msg)
@@ -146,7 +224,7 @@ class stock_engine():
             time = self.tick
         showList = []
         if stock.lower() == 'all':
-            showList = list(self.STOCKS.keys())
+            showList = self.STOCKS.keys()
         elif ':' in stock:
             stks = stock.split(':')
             for stk in stks:
@@ -159,16 +237,14 @@ class stock_engine():
                     showList.append(stock.upper())
             else:
                 return {'error':f'{stock} is not real dummyhead'}
-            
         marketGraph = '/home/pi/Botty/downloads/market.png'
         msg = []
         msg.append('```ini\n')
         data = {}
-        for st in self.stocks:
-            if st.short_name not in showList:
-                continue
-            msg.append(f'{st.name:25}  [${st.price:.2f}]')
-            data[st.short_name] = list(st.priceHistory.values())
+
+        for name in showList:
+            msg.append(f'{self.stocks[name].name:25}  [${self.stocks[name].price:.2f}]')
+            data[name] = list(self.stocks[name].priceHistory.values())
         df = pandas.DataFrame(data, index=list(range(0, self.tick + 1)))
         df = df.loc[df.index > self.tick + 1 - time]
         graph = df.plot.line()
@@ -179,35 +255,86 @@ class stock_engine():
 
         return {'msg':'\n'.join(msg), 'graph':marketGraph}
 
+    async def showHoldings(self, uid):
+        if uid in self.investors:
+            msg = []
+            msg.append('```ini\n')
+            for stk in self.investors[uid].portfolio:
+                msg.append(f'[{self.investors[uid].portfolio[stk]}] shares of [{stk}]')
+            msg.append('\n```')
+            return {'msg': '\n'.join(msg)}
+        else:
+            return {'error': 'Make an account ya goober'}
+
     async def save(self):
         self.running = False 
         await asyncio.sleep(60 / int(self.config['ticks']))  # Ensure that the last tick finishes before we save off data
 
         with open(self.STOCK_SAVE_FP, 'w+') as f:
             f.write(f'{self.tick}|{self.marketGrowthFactor}\n')
-            for stk in self.stocks:
+            for stk in self.stocks.values():
                 f.write(f'stock|{stk.name}|{stk.short_name}|{stk.price}|{stk.riskFactor}|{stk.priceHistory}\n')
-            for inv in list(self.investors.values()):
-                f.write(f'investor|{inv.name}|{inv.money}|{inv.portfolio}|{inv.total_gains}|{inv.history}')
+            for inv in self.investors.values():
+                f.write(f'investor|{inv.name}|{inv.uid}|{inv.money}|{inv.portfolio}|{inv.transactions}|{inv.history}|{inv.limits}')
 
     async def openAccount(self, name, uid):
-        if int(uid) in list(self.investors.keys()):
+        if int(uid) in self.investors.keys():
             return {'error': 'Account already Exists'}
         self.investors[int(uid)] = (investor(name, uid))
-        return None
+        return {}
 
     async def buy(self, uid, stk, amount:int):
-        bought = False
-        for stock in self.stocks:
-            if stk.upper() == stock.short_name:
-                total_price = stock.price * amount
+        if uid not in self.investors.keys():
+            return {'error': 'You need to open an account dumdum'}
+        if stk in self.stocks.keys():
+            return self.investors[uid].buy(stk, amount, self.stocks[stk].price)
 
-            
+    async def sell(self, uid, stk, amount):
+        if uid not in self.investors.keys():
+            return {'error': 'You need to open an account dumdum'}
+        if stk in self.stocks.keys():
+            return self.investors[uid].sell(stk, amount, self.stocks[stk].price)
+
+    async def limitBuy(self, uid, stk, amount:int, limit):
+        if uid not in self.investors.keys():
+            return {'error': 'You need to open an account dumdum'}
+        if stk in self.stocks.keys():
+            return self.investors[uid].limitBuy(stk, amount, limit)
+
+    async def limitSell(self, uid, stk, amount, limit):
+        if uid not in self.investors.keys():
+            return {'error': 'You need to open an account dumdum'}
+        if stk in self.stocks.keys():
+            return self.investors[uid].limitSell(stk, amount, limit)
+
+    async def showLimits(self, uid):
+        if uid not in self.investors.keys():
+            return {'error': 'You need to open an account dumdum'}
+
+        msg = []
+        msg.append('```ini\n')
+
+        if len(self.investors[uid].limits) == 0:
+            return {'msg': 'You have no limits'}
+
+        for lim, i in zip(self.investors[uid].limits, range(0, len(self.investors[uid].limits))):
+            msg.append(f"{i}: [{lim['type']} {lim['amount']} {lim['stock']} at {lim['limit']}]")
+        
+        msg.append('\n```')
+
+        return {'msg': '\n'.join(msg)}
+
+    async def cancelLimit(self, uid, index):
+        if index + 1 <= len(self.investors[uid].limits):
+            return self.investors[uid].limits.pop(index)
+        else:
+            return {'error': 'Not a valid index'}
+
 
 class stock():
     riskFactor = None  # 1-100 1 being extremely safe, 100 being extrememly dangerous
     price = None
-    priceHistory = None  # {tick, price}
+    priceHistory = None  # {tick: price}
     newsHistory = None
     name = None
     short_name = None
@@ -248,19 +375,94 @@ class investor():
     uid = None
     money = None
     portfolio = None
-    total_gains = None
+    transactions = None
     history = None
+    limits = []
 
-    def __init__(self, name, uid, money=1500, portfolio=None, total_gains=0, history=None):
+    def __init__(self, name, uid, money=1500.0, portfolio=None, transactions=None, history=None, limits=None):
         self.name = name
+        self.uid = uid
         self.money = money
         if portfolio is None:
-            self.portfolio = {}
+            self.portfolio = {} # {STK: amount}
         else:
             exec(f'self.portfolio = {portfolio}')
-        self.total_gains = total_gains
+
+        if transactions is None:
+            self.transactions = []
+        else:
+            exec(f'self.transactions = {transactions}')
 
         if history is None:
             self.history = {}
         else:
             exec(f'self.history = {history}')
+
+        if limits is None:
+            self.limits = []
+        else:
+            exec(f'self.limits = {limits}')
+
+    def update(self, tick, stockPrice):
+        if tick % 100 == 999:
+            self.money += 100.0
+        self.history[tick] = stockPrice + self.money
+
+    def buy(self, stock, amount, priceeach):
+        total_price = priceeach * amount
+
+        if amount <= 0:
+            return {'error': 'Try buying a real amount of stocks plz'}
+
+        if self.money >= total_price:
+            self.money -= total_price
+            if stock in self.portfolio:
+                self.portfolio[stock] = self.portfolio[stock] + amount
+            else:
+                self.portfolio[stock] = {}
+                self.portfolio[stock] = amount
+            self.transactions.append(f'Bought {amount} shares of {stock} for {priceeach} each.')
+            return {'msg': random.choice(['Nice Purchase', 'Wrong Move, dumdum', '... Are you sure?', 'I have a good feeling about this.', 'lmao', 'To the mooooooooooooon'])}
+        else:
+            return {'error': 'Not enough money loserman'}
+
+    def sell(self, stock, amount, priceeach):
+        if stock in self.portfolio:
+            if amount == 'all':
+                amount = self.portfolio[stock]
+            else:
+                amount = int(amount)
+            if self.portfolio[stock] >= amount:
+                total_price = priceeach * amount
+                self.portfolio[stock] -= amount
+
+                self.money += total_price
+                self.transactions.append(f'Sold {amount} shares of {stock} for {priceeach} each.')
+                if self.portfolio[stock] == 0:
+                    del self.portfolio[stock]
+                return {'msg': random.choice(['Nice Sell', 'Wrong Move, dumdum', '... Are you sure?', 'I have a good feeling about this.', 'lmao', 'Wrong moon?'])}
+            else:
+                return {'error': 'You do not have that many shares stoopid'}
+        else:
+            return {'error': 'You don\'t even have that stock '}
+
+    def limitBuy(self, stock, amount, limit):
+        if self.money >= amount * limit:
+            self.limits.append({'stock': stock, 'amount':amount, 'limit':limit, 'type': 'buy'})
+            self.money -= amount * limit
+            return {'msg': 'Limit set!'}
+        else:
+            return {'error': 'Not enough money loserman'}
+
+    def limitSell(self, stock, amount, limit):
+        if stock in self.portfolio:
+            if amount == 'all':
+                amount = self.portfolio[stock]
+
+            if self.portfolio[stock] >= amount:
+                self.limits.append({'stock': stock, 'amount':amount, 'limit':limit, 'type': 'sell'})
+                return {'msg': 'Limit set!'}
+            else:
+                return {'error': 'You do not have that many shares stoopid'}
+        else:
+            return {'error': 'You don\'t even have that stock '}
