@@ -124,7 +124,7 @@ class bugs(commands.Cog):
 
 RISK_LOWER = 40
 RISK_UPPER = 50
-PERSISTENT = False
+PERSISTENT = True
 
 class stock_engine():
     MARKET_VOLATILENESS = 15  # 0-100 0 being C4, 100 being a politcal discussion during thanksgiving 
@@ -142,7 +142,7 @@ class stock_engine():
         self.marketGrowthFactor = .1
 
         if PERSISTENT:
-            if os.path.exists(STOCK_SAVE_FP):
+            if os.path.exists(self.STOCK_SAVE_FP):
                 with open(self.STOCK_SAVE_FP, 'r') as f:
                     data = f.readline().strip().split('|')
                     self.tick = int(data[0])
@@ -288,12 +288,16 @@ class stock_engine():
             return {'error': 'You need to open an account dumdum'}
         if stk in self.stocks.keys():
             return self.investors[uid].buy(stk, amount, self.stocks[stk].price)
+        else:
+            return {'error': 'Try a real stock'}
 
     async def sell(self, uid, stk, amount):
         if uid not in self.investors.keys():
             return {'error': 'You need to open an account dumdum'}
         if stk in self.stocks.keys():
             return self.investors[uid].sell(stk, amount, self.stocks[stk].price)
+        else:
+            return {'error': 'Try a real stock'}
 
     async def limitBuy(self, uid, stk, amount:int, limit):
         if uid not in self.investors.keys():
