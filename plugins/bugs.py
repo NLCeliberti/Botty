@@ -20,32 +20,52 @@ class bugs(commands.Cog):
         self.helpstring.append('!!showMarket ; shows pretty graph')
         self.helpstring.append('!!openAccount ; become an investor') 
         self.helpstring.append('!!showInvestors ; shows everyones money')
-        self.helpstring.append('') 
-        self.helpstring.append('') 
-        self.helpstring.append('') 
-        self.helpstring.append('') 
-        self.helpstring.append('') 
-        self.helpstring.append('') 
+        self.helpstring.append('!!lossPorn ; shows your history') 
+        self.helpstring.append('!!showHoldings ; shows your owned stocks') 
+        self.helpstring.append('!!buy &stock &amount ; Buy some stocks') 
+        self.helpstring.append('!!sell &stock &amount ; Sell some stocks, \'all\' is a valid number') 
+        self.helpstring.append('!!limitBuy &stock &amount &price ; Only buy the stocks if the cost drops to price') 
+        self.helpstring.append('!!limitSell &stock &amount &price ; Only sell the stocks if the cost rises to price')
+        self.helpstring.append('!!showLimits ; Lists all your active limit buys and sells')
+        self.helpstring.append('!!cancelLimit ; Cancel a limit order, use the index from !!showLimits') 
 
         self.stockMarket = stock_engine()
 
     @commands.command(pass_context=True)
-    async def trends(self, ctx):
-        rtn = await self.stockMarket.showTrends()
-        await ctx.channel.send(rtn)
+    async def s(self, ctx):
+        if ctx.author.id != 175732928586842113:
+            await ctx.channel.send('You have no power here')
+            return
+        await self.stockMarket.save()
+        await ctx.channel.send('Saved')
+        await self.stockMarket.startMarket()    
 
     @commands.command(pass_context=True)
     async def configMarket(self, ctx, key, value):
+        if ctx.author.id != 175732928586842113:
+            await ctx.channel.send('You have no power here')
+            return
         if key in self.config.keys:
             self.config[key] = value
 
     @commands.command(pass_context=True)
     async def startMarket(self, ctx):
+        if ctx.author.id != 175732928586842113:
+            await ctx.channel.send('You have no power here')
+            return
         await self.stockMarket.startMarket()
 
     @commands.command(pass_context=True)
     async def stopMarket(self, ctx):
+        if ctx.author.id != 175732928586842113:
+            await ctx.channel.send('You have no power here')
+            return
         await self.stockMarket.stopMarket()
+
+    @commands.command(pass_context=True)
+    async def trends(self, ctx):
+        rtn = await self.stockMarket.showTrends()
+        await ctx.channel.send(rtn)
 
     @commands.command(pass_context=True)
     async def showMarket(self, ctx, stock='all', time=0):
@@ -54,6 +74,18 @@ class bugs(commands.Cog):
             await ctx.channel.send(rtn['error'])
         else:
             await ctx.channel.send(rtn['msg'], file=discord.File(rtn['graph']))
+
+    @commands.command(pass_context=True)
+    async def lossPorn(self, ctx, time=0):
+        rtn = await self.stockMarket.lossPorn(ctx.author.id, time)
+        if 'error' in rtn:
+            await ctx.channel.send(rtn['error'])
+        else:
+            await ctx.channel.send(rtn['msg'], file=discord.File(rtn['graph']))
+
+    @commands.command(pass_context=True)
+    async def stonks(self, ctx):
+        await ctx.channel.send(file=discord.File('/home/pi/Botty/downloads/inseks.png'))
 
     @commands.command(pass_context=True)
     async def showInvestors(self, ctx):
@@ -67,12 +99,6 @@ class bugs(commands.Cog):
             await ctx.channel.send(rtn['error'])
         else:
             await ctx.author.send(rtn['msg'])
-
-    @commands.command(pass_context=True)
-    async def s(self, ctx):
-        await self.stockMarket.save()
-        await ctx.channel.send('Saved')
-        await self.stockMarket.startMarket()       
 
     @commands.command(pass_context=True)
     async def openAccount(self, ctx):
@@ -133,7 +159,7 @@ class bugs(commands.Cog):
 
 RISK_LOWER = 40
 RISK_UPPER = 50
-PERSISTENT = True
+PERSISTENT = False
 
 class stock_engine():
     MARKET_VOLATILENESS = 15  # 0-100 0 being C4, 100 being a politcal discussion during thanksgiving 
@@ -147,7 +173,7 @@ class stock_engine():
     tick = 0
     
     def __init__(self):
-        self.config = {'ticks': 120}
+        self.config = {'ticks': 2}
         self.marketGrowthFactor = .1
 
         if PERSISTENT:
@@ -164,10 +190,10 @@ class stock_engine():
                             self.investors[int(data[2])] = investor(data[1], int(data[2]), float(data[3]), data[4], data[5], data[6], data[7])
             else:
                 for sts, st in self.STOCKS.items():
-                    self.stocks[sts] = stock(st, sts, random.randint(20,40), random.randint(RISK_LOWER, RISK_UPPER))
+                    self.stocks[sts] = stock(st, sts, random.randint(100,200), random.randint(RISK_LOWER, RISK_UPPER))
         else:
             for sts, st in self.STOCKS.items():
-                self.stocks[sts] = stock(st, sts, random.randint(20,40), random.randint(RISK_LOWER, RISK_UPPER))
+                self.stocks[sts] = stock(st, sts, random.randint(100,200), random.randint(RISK_LOWER, RISK_UPPER))
 
     async def startMarket(self):
         if not self.running:
@@ -181,14 +207,14 @@ class stock_engine():
     async def updateMarket(self):
         while self.running:
             if self.tick % self.config['ticks'] * 60 * 60 == 0:  # Save every hour... probably
-                self.save()
-                self.startMarket()
+                await self.save()
+                self.running = True
 
             await asyncio.sleep(60 / int(self.config['ticks']))
             if random.randint(0,100) < self.MARKET_VOLATILENESS:
                 rfactor = 1 if (random.randint(0,100) > 50 * (1 + 16*(self.marketGrowthFactor * abs(self.marketGrowthFactor)))) else -1 
                 self.marketGrowthFactor += rfactor * random.randint(1,3) * .01
-                print(self.marketGrowthFactor)
+                #print(self.marketGrowthFactor)
             self.tick += 1
             for st in self.stocks.values():
                 st.updatePrice(self.tick, self.marketGrowthFactor)
@@ -227,7 +253,7 @@ class stock_engine():
             stocks = 0
             for stk in inv.portfolio:
                 stocks += self.stocks[stk].price * inv.portfolio[stk]
-            msg.append(f'[{inv.name}] Cash ${inv.money:.2f} Stocks ${stocks:.2f}')
+            msg.append(f'[{inv.name:^25}] Total ${inv.money + stocks:4.2f}\tCash ${inv.money:4.2f}\tStocks ${stocks:4.2f}')
         msg.append('\n```')
 
         return '\n'.join(msg)
@@ -268,6 +294,28 @@ class stock_engine():
 
         return {'msg':'\n'.join(msg), 'graph':marketGraph}
 
+
+    async def lossPorn(self, uid, time=0):
+        if time == 0:
+            time = self.tick
+
+        if uid in self.investors:
+            lossGraph = '/home/pi/Botty/downloads/lossporn.png'
+            data = {}
+
+            data[self.investors[uid].name] = self.investors[uid].history
+
+            df = pandas.DataFrame(data, index=list(range(0, self.tick + 1)))
+            df = df.loc[df.index > self.tick + 1 - time]
+            graph = df.plot.line()
+            fig = graph.get_figure()
+            fig.savefig(lossGraph)
+            matplotlib.pyplot.close(fig)
+
+            return {'msg': '', 'graph':lossGraph}
+        else:
+            return {'error': 'Make an account ya goober'}
+
     async def showHoldings(self, uid):
         if uid in self.investors:
             msg = []
@@ -288,7 +336,7 @@ class stock_engine():
             for stk in self.stocks.values():
                 f.write(f'stock|{stk.name}|{stk.short_name}|{stk.price}|{stk.riskFactor}|{stk.priceHistory}\n')
             for inv in self.investors.values():
-                f.write(f'investor|{inv.name}|{inv.uid}|{inv.money}|{inv.portfolio}|{inv.transactions}|{inv.history}|{inv.limits}')
+                f.write(f'investor|{inv.name}|{inv.uid}|{inv.money}|{inv.portfolio}|{inv.transactions}|{inv.history}|{inv.limits}\n')
 
     async def openAccount(self, name, uid):
         if int(uid) in self.investors.keys():
@@ -421,7 +469,7 @@ class investor():
             exec(f'self.limits = {limits}')
 
     def update(self, tick, stockPrice):
-        if tick % 100 == 999:
+        if tick % 1000 == 0:
             self.money += 100.0
         self.history[tick] = stockPrice + self.money
 
