@@ -10,7 +10,7 @@ import processing
 import PIL
 import asyncio
 import googlesearch
-
+import random
 class Memes(commands.Cog):
     helpstring = []
     helpEmoji = '🆘'
@@ -40,7 +40,8 @@ class Memes(commands.Cog):
         recovered = nums[2].text.replace(' ', '').replace('\n', '')
 
         if ctx.message.author.id == 194250346883842048:
-            await ctx.channel.send(f"Hey {ctx.message.guild.get_member(194250346883842048).mention}, {deaths} have fucking DIED :skull:")
+            sibs = await ctx.message.guild.fetch_member(194250346883842048)
+            await ctx.channel.send(f"Hey {sibs.mention}, {deaths} have fucking DIED :skull:")
         else:
             msg = ["```ini"]
             msg.append(f'[Cases] {cases}')
@@ -171,6 +172,16 @@ class Memes(commands.Cog):
         img.save(img_out, 'jpeg')   
 
         await ctx.channel.send(file=discord.File(img_out))
+
+    @commands.command(pass_context=True)
+    async def eb(self, ctx, *args):
+        await self.eightball(ctx, *args)
+        
+    @commands.command(pass_context=True)
+    async def eightball(self, ctx, *args):
+        answers = ["Fuck yeah!", "Of course, you donkey", "Calculating.......\nOutlook good", "You may rely on it", "My programmer sucks, try again later", "Out to Lunch", "What do I look like, the bot with all the answers?", "Hell no you dolt", "CIA says: No"]
+        await ctx.channel.send(random.choice(answers))
+
 
     @commands.command(pass_context=True)
     async def meme(self, ctx, *args):

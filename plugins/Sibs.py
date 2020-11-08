@@ -17,6 +17,11 @@ import twitter
 
 import tweepy
 
+SIBS_GUILD = 732438863762554881
+SIBS_BOT_CHANNEL = 732447278165393429
+
+
+WINTER = 210494176347815937
 
 class Sibs(commands.Cog):
     helpstring = []
@@ -48,6 +53,15 @@ class Sibs(commands.Cog):
 
         self.twi.VerifyCredentials()
         
+
+    @commands.command(pass_context=True)
+    async def fuckWith(self, ctx, *msg):
+        chn = self.bot.get_channel(SIBS_BOT_CHANNEL)
+        winter = await chn.guild.fetch_member(WINTER)
+        #await chn.send(f"{winter.mention} AY YO THIS DICK AINT GONNA SUCK ITSELF")
+        await chn.send(' '.join(msg).replace('winter', winter.mention))
+        return
+
     @commands.command(pass_context=True)
     async def list(self, ctx):
         files = os.listdir('/home/pi/Botty/markov/')
@@ -61,6 +75,8 @@ class Sibs(commands.Cog):
 
     @commands.command(pass_context=True)
     async def geneva(self, ctx, number=1, filename=None, minlen=3, notags=False):
+        print(ctx.message.author)
+        print(ctx.message.author.id)
         try:
             NUMBER = int(number)
             minlen = int(minlen)
@@ -112,7 +128,6 @@ class Sibs(commands.Cog):
                     print("You can still generate posts without tags using --notags")
                     return
     '''
-
 
     @commands.command(pass_context=True)
     async def g(self, ctx, number=1, filename=None, minlen=3, notags=False):

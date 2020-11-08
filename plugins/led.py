@@ -2,6 +2,7 @@ import serial
 import struct
 from color import colors
 from random import *
+ser = None
 
 typeList = {'Reset': 0,
             'Add': 1,
@@ -15,20 +16,13 @@ typeList = {'Reset': 0,
             'Off': 9
            }
 
-
-# read from Arduino
-try:
-    ser = serial.Serial('COM9',9600)
-    got = ser.read()
-    print('Established Connection: ' + got.decode("utf-8"))
-except:
-    print('Connection not established. Restart Botty if you care')
-
 def EC():
+    global ser
     got = ser.read()
     print('Established Connection: ' + got.decode("utf-8"))
 
 def send(inp):
+    global ser
     msg = makeByteMsg(inp)
     if type(msg) is bytes:
         ser.write(msg)
@@ -86,7 +80,14 @@ def makeByteMsg(inp):
 #msg = '1 ' + str(randint(0,255)) + ' ' + str(randint(0,255)) + ' ' + str(randint(0,255))
 #print(msg)
 
-while(0):
-    inp = input("Enter your commands")
-    print(type(inp))
-    send(inp)
+
+
+try:
+    # read from Arduino
+    ser = serial.Serial('/dev/ttyUSB0',9600)
+    got = ser.read()
+    print('Established Connection: ' + got.decode("utf-8"))
+    send('5')
+    send('5')
+except:
+    print('Connection not established. Restart Botty if you care')

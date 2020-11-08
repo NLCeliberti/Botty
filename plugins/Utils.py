@@ -6,6 +6,7 @@ import random
 import shutil
 from insults import insult
 
+
 class Utils(commands.Cog):
     helpstring = []
     helpEmoji = '🔧'
@@ -31,7 +32,7 @@ class Utils(commands.Cog):
     async def on_raw_reaction_add(self, payload):
         if payload.message_id in self.msgs:
             guild = self.bot.get_guild(payload.guild_id)
-            mem = guild.get_member(payload.user_id)
+            mem = await guild.fetch_member(payload.user_id)
             role = discord.utils.get(guild.roles, name=self.roles[payload.emoji.name])
             await mem.add_roles(role)
 
@@ -39,17 +40,26 @@ class Utils(commands.Cog):
     async def on_raw_reaction_remove(self, payload):
         if payload.message_id in self.msgs:
             guild = self.bot.get_guild(payload.guild_id)
-            mem = guild.get_member(payload.user_id)
+            mem = guild.get_member(int(payload.user_id))
             role = discord.utils.get(guild.roles, name=self.roles[payload.emoji.name])
             await mem.remove_roles(role)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
+        #chn = self.bot.get_channel(704901570617409600)
+        #gld = self.bot.get_guild(704901570617409597)
+        print(member)
+        if member.guild.system_channel:
+            await member.guild.system_channel.send(f'Welcome {member.mention}. {insult()}')
+        if member.guild.id == 704901570617409600:
+            role = discord.utils.get(gld.roles, name='Citizen')
+            await member.add_roles(role)
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
         chn = self.bot.get_channel(704901570617409600)
-        if member.guild.id == 704901570617409597:
-            await chn.send(f'Welcome {member.mention}. {insult()}')
-            role = discord.utils.get(guild.roles, name='Citizen')
-            await mem.add_roles(role)
+        if member.guild.system_channel:
+            await member.guild.system_channel.send(f'Welcome {member.mention}. {insult()}')
 
     @commands.command(pass_context=True)
     async def role(self, ctx, emoji, role, msg=0):
