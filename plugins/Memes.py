@@ -40,7 +40,8 @@ class Memes(commands.Cog):
         recovered = nums[2].text.replace(' ', '').replace('\n', '')
 
         if ctx.message.author.id == 194250346883842048:
-            await ctx.channel.send(f"Hey {ctx.message.guild.get_member(194250346883842048).mention}, {deaths} have fucking DIED :skull:")
+            sibs = await ctx.message.guild.fetch_member(194250346883842048)
+            await ctx.channel.send(f"Hey {sibs.mention}, {deaths} have fucking DIED :skull:")
         else:
             msg = ["```ini"]
             msg.append(f'[Cases] {cases}')

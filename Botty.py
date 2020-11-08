@@ -23,7 +23,8 @@ helpMsgs = [0,0,0,0,0]
 helpMsgCount = 0
 helpEmojis = {}
 
-Client = discord.Client()
+intents = discord.Intents.all()
+Client = discord.Client(intents=intents)
 bot_prefix = "!!"
 bot = commands.Bot(command_prefix=bot_prefix)
 bot.remove_command('help')
@@ -39,6 +40,7 @@ async def on_ready():
     global helpEmojis
     for p in plugins:
         exec(f'helpEmojis[{p}.{p}.helpEmoji] = {p}.{p}.__name__')
+    
 
 @bot.event
 async def on_message(message):

@@ -8,7 +8,16 @@ import numpy as np
 from rgbmatrix import RGBMatrix, RGBMatrixOptions
 from PIL import Image
 import subprocess
-from led import send, EC
+#from led import send, EC
+
+import zmq
+import zlib
+import pickle
+import requests
+
+context = zmq.Context()
+socket = context.socket(zmq.REQ)
+socket.connect("tcp://192.168.1.4:5555")
 
 class leds(commands.Cog):
     helpstring = []
@@ -19,8 +28,15 @@ class leds(commands.Cog):
         self.helpstring.append('!!led &number *rgb ; Control Nick\'s LEDs')
         self.helpstring.append('!!pixel *url ; Send a url or an image to pixelate')
 
+        
     @commands.command(pass_context=True)
     async def led(self, ctx, typ, *rgb):
+        rtn = send(typ)
+        if(rtn == 'Leds are cool'):
+            await ctx.message.delete()
+        else:
+            await ctx.channel.send(rtn)
+        '''
         if(len(rgb) > 3):
             await ctx.channel.send('Thats a bad message 1')
             return
@@ -37,6 +53,7 @@ class leds(commands.Cog):
             await ctx.message.delete()
         else:
             await ctx.channel.send(rtn)
+        '''
 
     @commands.command(pass_context=True)
     async def resetSerial(self, ctx):
@@ -46,7 +63,7 @@ class leds(commands.Cog):
             await ctx.channel.send('Fuck off')
 
     @commands.command(pass_context=True)
-    async def pixel(ctx, img=None):
+    async def pixel(self, ctx, img=None):
         img_src = '/home/pi/Botty/downloads/pixel_src.png'
         img_out = '/home/pi/Botty/downloads/pixeled.png'
         if img:
@@ -59,18 +76,29 @@ class leds(commands.Cog):
             with open(img_src, 'wb') as f:
                 f.write(response.content)
 
+
+        with open(img_src, 'rb') as f:
+            self.send_zipped_pickle(socket, f.read())
+        await ctx.channel.send(file=discord.File(img_src))
+        message = socket.recv()
+
+        return
         # Open input image in BGR space
         im_in = cv2.imread(img_src, cv2.IMREAD_COLOR)
 
         # Process image with given arguments
-        im_out = process_frame(im_in, 32, 64, 16, None)
+        im_out = self.process_frame(im_in, 32, 64, 16, None)
 
         # Write output (or display output image, depending on usage)
         cv2.imwrite(img_out, im_out)
 
+        with open(img_out, 'rb') as f:
+            self.send_zipped_pickle(socket, f.read())
         await ctx.channel.send(file=discord.File(img_out))
-        await ctx.channel.send('img currently disabled')
-        subprocess.Popen(['sudo', 'python3', '/home/pi/Botty/imports/img.py'])
+        message = socket.recv()
+        
+        #await ctx.channel.send('img currently disabled')
+        #Qsubprocess.Popen(['sudo', 'python3', '/home/pi/Botty/imports/img.py'])
     #    image = Image.open(img_out)
     #
     #    # Configuration for the matrix
@@ -90,7 +118,13 @@ class leds(commands.Cog):
     #    time.sleep(10)
     #    del matrix
 
-    def process_frame(im, width, height, n_clusters=16, prescale_size=None):
+    def send_zipped_pickle(self, socket, obj, flags=0, protocol=-1):
+        """pickle an object, and zip the pickle before sending it"""
+        p = pickle.dumps(obj, protocol)
+        z = zlib.compress(p)
+        return socket.send(z, flags=flags)
+
+    def process_frame(self, im, width, height, n_clusters=16, prescale_size=None):
         h, w = im.shape[:2]
 
         # Apply optional prescale to source image
@@ -98,14 +132,14 @@ class leds(commands.Cog):
             im = cv2.resize(im, prescale_size, interpolation=cv2.INTER_LINEAR)
 
         # Quantize (cluster colors) and resample (subsample+supersample)
-        return im_resample(im_quantize(im, n_clusters), width, height, w, h)
+        return self.im_resample(self.im_quantize(im, n_clusters), width, height, w, h)
 
-    def im_resample(im, subsample_width, subsample_height, resample_width, resample_height):
+    def im_resample(self, im, subsample_width, subsample_height, resample_width, resample_height):
         # Subsample to pixelate
         im_subsample = cv2.resize(im, (subsample_width, subsample_height), interpolation=cv2.INTER_LINEAR)
         return cv2.resize(im_subsample, (resample_width, resample_height), interpolation=cv2.INTER_NEAREST)
 
-    def im_quantize(im, n_clusters):
+    def im_quantize(self, im, n_clusters):
         h, w = im.shape[:2]
 
         # Convert the image from the BGR color space to the L*a*b* color space.
@@ -123,3 +157,99 @@ class leds(commands.Cog):
 
         # Convert from L*a*b* back to BGR
         return cv2.cvtColor(im_quant_colorspace, cv2.COLOR_LAB2BGR)
+
+
+import serial
+import struct
+from color import colors
+from random import *
+ser = None
+
+typeList = {'Reset': 0,
+            'Add': 1,
+            'Solid': 2,
+            'Snake': 3,
+            'Splits': 4,
+            'Murica': 5,
+            'Rave': 6,
+            'Rainbow': 7,
+            'White': 8,
+            'Off': 9
+           }
+
+def EC():
+    global ser
+    got = ser.read()
+    print('Established Connection: ' + got.decode("utf-8"))
+
+def send(inp):
+    global ser
+    msg = makeByteMsg(inp)
+    if type(msg) is bytes:
+        ser.write(msg)
+        return('Leds are cool')
+    elif type(msg) is str:
+        return(msg)
+    else:
+        return('God knows what happened')
+
+
+def makeByteMsg(inp):
+    msg = ''
+    arr = inp.split(' ')
+    out = []
+    try:
+        out.append(int(arr[0]))
+    except ValueError:
+        if(arr[0] in typeList):
+            out.append(typeList[arr[0]])
+        else:
+            return 'bad type word'
+    if(out[0] == 1):
+        if(len(arr) < 2):
+            return 'said to add color but no color'
+
+        #Get rgb color
+        if(len(arr) <= 2):
+            if(arr[1] in colors):
+                clr = colors[arr[1]]
+                clrA = clr.split(',')
+                out.append(int(clrA[0]))
+                out.append(int(clrA[1]))
+                out.append(int(clrA[2]))
+            else:
+                return 'bad color word'
+        elif len(arr) == 4:
+            try:
+                out.append(int(arr[1]))
+                out.append(int(arr[2]))
+                out.append(int(arr[3]))
+            except ValueError:
+                return 'color not rgb'
+        else:
+            return 'Bad input length'
+    if(out[0] >= len(typeList)):
+        return 'bad type 2'
+    #Turn into bytes
+    if(len(out) == 1):
+        msg = struct.pack('>1B', out[0])
+    elif len(out) == 4:
+        msg = struct.pack('>4B', out[0], out[1], out[2], out[3])
+
+    return(msg)
+
+#msg = '1 ' + str(randint(0,255)) + ' ' + str(randint(0,255)) + ' ' + str(randint(0,255))
+#print(msg)
+
+
+
+try:
+    # read from Arduino
+    ser = serial.Serial('/dev/ttyUSB0',9600)
+    got = ser.read()
+    print('Established Connection: ' + got.decode("utf-8"))
+    send('5')
+except Exception as e:
+    with open('/home/pi/Botty/logs/error.err', 'a') as f:
+        f.write(f"{e}\n")
+    print('Connection not established. Restart Botty if you care')

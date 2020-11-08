@@ -7,6 +7,7 @@ import pandas
 import random
 import matplotlib
 import os
+import datetime
 
 class bugs(commands.Cog):
     helpstring = []
@@ -38,7 +39,7 @@ class bugs(commands.Cog):
             return
         await self.stockMarket.save()
         await ctx.channel.send('Saved')
-        await self.stockMarket.startMarket()    
+        await self.stockMarket.startMarket(self.bot)    
 
     @commands.command(pass_context=True)
     async def configMarket(self, ctx, key, value):
@@ -53,7 +54,7 @@ class bugs(commands.Cog):
         if ctx.author.id != 175732928586842113:
             await ctx.channel.send('You have no power here')
             return
-        await self.stockMarket.startMarket()
+        await self.stockMarket.startMarket(self.bot)
 
     @commands.command(pass_context=True)
     async def stopMarket(self, ctx):
@@ -65,7 +66,9 @@ class bugs(commands.Cog):
     @commands.command(pass_context=True)
     async def trends(self, ctx):
         rtn = await self.stockMarket.showTrends()
-        await ctx.channel.send(rtn)
+        msg = await ctx.channel.send(rtn)
+        await asyncio.sleep(3)
+        self.stockMarket.addTrendMsg(msg)
 
     @commands.command(pass_context=True)
     async def showMarket(self, ctx, stock='all', time=0):
@@ -109,7 +112,7 @@ class bugs(commands.Cog):
             await ctx.channel.send('Welcome Investor!')
 
     @commands.command(pass_context=True)
-    async def buy(self, ctx, stock, amount:int):
+    async def buy(self, ctx, stock, amount):
         rtn = await self.stockMarket.buy(ctx.author.id, stock.upper(), amount)
         if 'error' in rtn:
             await ctx.channel.send(rtn['error'])
@@ -117,7 +120,10 @@ class bugs(commands.Cog):
             await ctx.channel.send(rtn['msg'])
 
     @commands.command(pass_context=True)
-    async def sell(self, ctx, stock, amount):
+    async def sell(self, ctx, stock, amount=None):
+        if amount is None and stock.lower() != 'all':
+            await ctx.channel.send('Wtf you tryna do')
+            return
         rtn = await self.stockMarket.sell(ctx.author.id, stock.upper(), amount)
         if 'error' in rtn:
             await ctx.channel.send(rtn['error'])
@@ -159,7 +165,7 @@ class bugs(commands.Cog):
 
 RISK_LOWER = 40
 RISK_UPPER = 50
-PERSISTENT = False
+PERSISTENT = True
 
 class stock_engine():
     MARKET_VOLATILENESS = 15  # 0-100 0 being C4, 100 being a politcal discussion during thanksgiving 
@@ -171,6 +177,9 @@ class stock_engine():
     stocks = {}
     investors = {}
     tick = 0
+
+    trendMessages = [None, None]
+    trendMessagesCount = 0
     
     def __init__(self):
         self.config = {'ticks': 2}
@@ -195,16 +204,16 @@ class stock_engine():
             for sts, st in self.STOCKS.items():
                 self.stocks[sts] = stock(st, sts, random.randint(100,200), random.randint(RISK_LOWER, RISK_UPPER))
 
-    async def startMarket(self):
+    async def startMarket(self, bot):
         if not self.running:
             self.running = True
-            await self.updateMarket()
+            await self.updateMarket(bot)
 
     async def stopMarket(self):
         if self.running:
             self.running = False
 
-    async def updateMarket(self):
+    async def updateMarket(self, bot):
         while self.running:
             if self.tick % self.config['ticks'] * 60 * 60 == 0:  # Save every hour... probably
                 await self.save()
@@ -234,16 +243,31 @@ class stock_engine():
                     stocksPrice += self.stocks[stk].price * inv.portfolio[stk]
                 inv.update(self.tick, stocksPrice)
             
+            #print(self.trendMessages)
+            for msg in self.trendMessages:
+                if msg is not None:
+                    rtn = await self.showTrends()
+                    await msg.edit(content=rtn)
+            
 
     async def showTrends(self):
         msg = []
         msg.append('```ini\n')
-        msg.append(f'MGF: {self.marketGrowthFactor:.2f}')
+        msg.append(f'Tick: {self.tick}  Last Updated: {datetime.datetime.now()}')
+        msg.append(f'[Stock  Price  1-Tick  10-Tick  100-Tick]')
         for st in self.stocks.values():
-            msg.append(f'[{st.short_name:3}] ${st.price:4.2f} {st.riskFactor}')
+            prices = list(st.priceHistory.values())[-100:]
+            msg.append(f'[{st.short_name}]  ${st.price:4.2f} {self.sign(prices[8], prices[9])}${abs(prices[9] - prices[8]):.2f}  {self.sign(prices[0], prices[9])}${abs(prices[9] - prices[0]):.2f}   {self.sign(prices[0], prices[99])}${abs(prices[99] - prices[0]):.2f}')
         msg.append('\n```')
 
         return '\n'.join(msg)
+
+    def sign(self, p1, p2):
+        return '-' if p2 - p1 < 0 else ' '
+
+    def addTrendMsg(self, msg):
+        self.trendMessages[self.trendMessagesCount % 2] = msg
+        self.trendMessagesCount += 1
 
     async def showInvestors(self):
         msg = []
@@ -320,8 +344,9 @@ class stock_engine():
         if uid in self.investors:
             msg = []
             msg.append('```ini\n')
+            msg.append(f'Cash: [${self.investors[uid].money:.2f}]')
             for stk in self.investors[uid].portfolio:
-                msg.append(f'[{self.investors[uid].portfolio[stk]}] shares of [{stk}]')
+                msg.append(f'[{self.investors[uid].portfolio[stk]}] shares of [{stk}] worth [${self.stocks[stk.upper()].price:.2f}] each for a total of [${self.stocks[stk.upper()].price * self.investors[uid].portfolio[stk]:.2f}]')
             msg.append('\n```')
             return {'msg': '\n'.join(msg)}
         else:
@@ -357,6 +382,10 @@ class stock_engine():
             return {'error': 'You need to open an account dumdum'}
         if stk in self.stocks.keys():
             return self.investors[uid].sell(stk, amount, self.stocks[stk].price)
+        elif stk.lower() == 'all':
+            for stock in self.investors[uid].portfolio.copy():
+                msg = self.investors[uid].sell(stock, 'all', self.stocks[stock].price)
+            return msg
         else:
             return {'error': 'Try a real stock'}
 
@@ -474,10 +503,16 @@ class investor():
         self.history[tick] = stockPrice + self.money
 
     def buy(self, stock, amount, priceeach):
-        total_price = priceeach * amount
-
+        if amount.lower() == 'all':
+            amount = int(self.money / priceeach)
+        
+        try:
+            amount = int(amount)
+        except:
+            return {'error': 'That\'s not a real number.'}
         if amount <= 0:
             return {'error': 'Try buying a real amount of stocks plz'}
+        total_price = priceeach * amount
 
         if self.money >= total_price:
             self.money -= total_price

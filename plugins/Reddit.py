@@ -23,7 +23,7 @@ class Reddit(commands.Cog):
         self.helpstring.append('!!cat ; cat')
         self.helpstring.append('!!pic ; pic')
 
-        with open('/home/pi/Botty/deps/reddit.txt' 'r') as f:
+        with open('/home/pi/Botty/deps/reddit.txt', 'r') as f:
             _ = f.read().split('\n')
             self.client = _[0].strip()
             self.secret = _[1].strip()
