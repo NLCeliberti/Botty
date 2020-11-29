@@ -7,7 +7,7 @@ from PIL import Image
 
 sys.exit(2)
 
-image = Image.open('/home/pi/Botty/imports/downloads/pixeled.png')
+image = Image.open('/home/pi/workspace/Botty/imports/downloads/pixeled.png')
 
 # Configuration for the matrix
 options = RGBMatrixOptions()

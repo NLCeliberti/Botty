@@ -5,10 +5,10 @@ import sys
 import importlib
 import random
 import asyncio
-sys.path.insert(1, '/home/pi/Botty/plugins')
+sys.path.insert(1, '/home/pi/workspace/Botty/plugins')
 
 plugins = []
-with open('/home/pi/Botty/deps/plugins.txt', 'r') as f:
+with open('/home/pi/workspace/Botty/deps/plugins.txt', 'r') as f:
     for im in f.read().split(' '):
         plugins.append(im.strip())
 
@@ -24,22 +24,22 @@ helpMsgCount = 0
 helpEmojis = {}
 
 intents = discord.Intents.all()
-Client = discord.Client(intents=intents)
+
 bot_prefix = "!!"
-bot = commands.Bot(command_prefix=bot_prefix)
+bot = commands.Bot(command_prefix=bot_prefix, intents=intents)
 bot.remove_command('help')
 
-commandsFile = '/home/pi/Botty/logs/commands.log'
+commandsFile = '/home/pi/workspace/Botty/logs/commands.log'
 
 @bot.event
 async def on_ready():
+    global helpEmojis
+    for p in plugins:
+        exec(f'helpEmojis[{p}.{p}.helpEmoji] = {p}.{p}.__name__')
     print("Bot Online!")
     print("Name: {}".format(bot.user.name))
     print("ID: {}".format(bot.user.id))
     await bot.change_presence(activity=discord.Game(name='The result of liquor and depression'))
-    global helpEmojis
-    for p in plugins:
-        exec(f'helpEmojis[{p}.{p}.helpEmoji] = {p}.{p}.__name__')
     
 
 @bot.event
@@ -88,7 +88,7 @@ async def reload(ctx, cog, newcog=False):
             else:
                 await ctx.channel.send('Cog not found')
         else:
-            with open('/home/pi/Botty/deps/plugins.txt', 'a') as f:
+            with open('/home/pi/workspace/Botty/deps/plugins.txt', 'a') as f:
                 f.write(f' {cog}')
                 exec(f'import {cog }')
                 exec(f'bot.add_cog({cog}.{cog}(bot))')
@@ -167,6 +167,6 @@ def addHelpMsg(id):
     helpMsgs[helpMsgCount % 5] = id
     helpMsgCount += 1
 
-with open('/home/pi/Botty/deps/botty_secret.txt', 'r') as f:
+with open('/home/pi/workspace/Botty/deps/botty_secret.txt', 'r') as f:
     sekret = f.read()    
 bot.run(sekret) #  Botty

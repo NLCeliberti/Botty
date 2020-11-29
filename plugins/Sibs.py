@@ -33,9 +33,9 @@ class Sibs(commands.Cog):
         self.helpstring.append('!!twit &handle *number ; Scrapes number tweets from handle\'s feed and builds markov seed')
         self.helpstring.append('!!scrape *url *start *end ; Scrape tumblr blog from start page to end page and build markov seed')
         self.helpstring.append('!!geneva *number *filename; Returns number of quotes from the given markov seed (g)')
-        self.helpstring.append('!!list ; Lists all available markov seeds')
+        self.helpstring.append('!!listMarkovs ; Lists all available markov seeds')
         secrets = {}
-        with open('/home/pi/Botty/deps/twit_secrets.txt', 'r') as f:
+        with open('/home/pi/workspace/Botty/deps/twit_secrets.txt', 'r') as f:
             for l in f.readlines():
                 d = l.replace('\n', '').split('----')
                 secrets[d[0]] = d[1]
@@ -63,8 +63,8 @@ class Sibs(commands.Cog):
         return
 
     @commands.command(pass_context=True)
-    async def list(self, ctx):
-        files = os.listdir('/home/pi/Botty/markov/')
+    async def listMarkovs(self, ctx):
+        files = os.listdir('/home/pi/workspace/Botty/markov/')
         msg = []
         msg.append('```ini\n')
         for f in files:
@@ -85,7 +85,7 @@ class Sibs(commands.Cog):
             return
         if filename is None:
             filename = ctx.channel.name
-        FILENAME = '/home/pi/Botty/markov/' + filename
+        FILENAME = '/home/pi/workspace/Botty/markov/' + filename
         if '.markov' not in FILENAME:
             FILENAME += '.markov'
         if not os.path.exists(FILENAME):
@@ -137,11 +137,11 @@ class Sibs(commands.Cog):
     async def scrape(self, ctx, url, start=1, end=10, tag=None, notags=False, nohash=False, prune=False, debug=False):
         if tag == None:
             TARGET_URL = "https://{}.tumblr.com/page/".format(url)
-            TARGET_FILE = "/home/pi/Botty/markov/{}.markov".format(url)
+            TARGET_FILE = "/home/pi/workspace/Botty/markov/{}.markov".format(url)
         else:
             TARGET_URL = "https://{}.tumblr.com/tagged/{}/page/"
             TARGET_URL = TARGET_URL.format(url, urllib.parse.quote(tag))
-            TARGET_FILE = "/home/pi/Botty/markov/{}.{}.markov".format(url, urllib.parse.quote(tag))
+            TARGET_FILE = "/home/pi/workspace/Botty/markov/{}.{}.markov".format(url, urllib.parse.quote(tag))
 
         await ctx.channel.send('Scraping...')
         try:
@@ -182,10 +182,10 @@ class Sibs(commands.Cog):
                         CORPUS.append(twet)
 
         try:
-            os.remove(f'/home/pi/Botty/markov/{tag[1:]}.markov')
+            os.remove(f'/home/pi/workspace/Botty/markov/{tag[1:]}.markov')
         except OSError:
             pass
-        mark = MarkovChain(f'/home/pi/Botty/markov/{tag[1:]}.markov')
+        mark = MarkovChain(f'/home/pi/workspace/Botty/markov/{tag[1:]}.markov')
         mark.generateDatabase('\n'.join(CORPUS))
         mark.dumpdb()
         await ctx.channel.send(f'{tag[1:]}.markov')
@@ -203,7 +203,7 @@ class Sibs(commands.Cog):
             await asyncio.sleep(.01)
 
 
-        mark = MarkovChain(f'/home/pi/Botty/markov/{handle}.markov')
+        mark = MarkovChain(f'/home/pi/workspace/Botty/markov/{handle}.markov')
         mark.generateDatabase('\n'.join(CORPUS))
         mark.dumpdb()
         await ctx.channel.send(f'{handle}.markov')
@@ -256,10 +256,10 @@ class Sibs(commands.Cog):
             CORPUS.append(message.content)
 
         try:
-            os.remove(f'/home/pi/Botty/markov/{ctx.channel.name}.markov')
+            os.remove(f'/home/pi/workspace/Botty/markov/{ctx.channel.name}.markov')
         except OSError:
             pass
-        mark = MarkovChain(f'/home/pi/Botty/markov/{ctx.channel.name}.markov')
+        mark = MarkovChain(f'/home/pi/workspace/Botty/markov/{ctx.channel.name}.markov')
         mark.generateDatabase('\n'.join(CORPUS))
         mark.dumpdb()
         await ctx.channel.send(f'{ctx.channel.name}.markov')

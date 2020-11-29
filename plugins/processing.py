@@ -47,9 +47,9 @@ async def crushAndBack(img):
 
 async def addFlare(img, img_src):
     ''' Initialising dlib for frontal facial features '''
-    flare = Image.open('/home/pi/Botty/downloads/flare.png')
+    flare = Image.open('/home/pi/workspace/Botty/downloads/flare.png')
     detect = dlib.get_frontal_face_detector()
-    predict = dlib.shape_predictor("/home/pi/Botty/deps/shape_predictor_68_face_landmarks.dat")
+    predict = dlib.shape_predictor("/home/pi/workspace/Botty/deps/shape_predictor_68_face_landmarks.dat")
 
     (lS, lE) = face_utils.FACIAL_LANDMARKS_68_IDXS["left_eye"]
     (rS, rE) = face_utils.FACIAL_LANDMARKS_68_IDXS["right_eye"]

@@ -79,7 +79,7 @@ class r6(commands.Cog):
 
     def r6auth(self):
         if self.auth is None or self.auth.session.closed:
-            with open('/home/pi/Botty/deps/r6_secret.txt', 'r') as f:
+            with open('/home/pi/workspace/Botty/deps/r6_secret.txt', 'r') as f:
                 for l in f:
                     t = l.split(' ')
                     email = t[0]

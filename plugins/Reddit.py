@@ -23,7 +23,7 @@ class Reddit(commands.Cog):
         self.helpstring.append('!!cat ; cat')
         self.helpstring.append('!!pic ; pic')
 
-        with open('/home/pi/Botty/deps/reddit.txt', 'r') as f:
+        with open('/home/pi/workspace/Botty/deps/reddit.txt', 'r') as f:
             _ = f.read().split('\n')
             self.client = _[0].strip()
             self.secret = _[1].strip()
@@ -71,7 +71,7 @@ class Reddit(commands.Cog):
     @commands.command(pass_context=True)
     async def pic(self, ctx, subreddit=None):
         subs = []
-        filepath = '/home/pi/Botty/deps/pics.txt'
+        filepath = '/home/pi/workspace/Botty/deps/pics.txt'
         if(subreddit is not None):
             with open(filepath, 'r') as f:
                 new = True

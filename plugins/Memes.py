@@ -135,9 +135,9 @@ class Memes(commands.Cog):
 
     @commands.command(pass_context=True)
     async def deepfry(self, ctx, img=None, flares=True):
-        img_src = '/home/pi/Botty/downloads/df_src.png'
-        img_temp = '/home/pi/Botty/downloads/df_temp.jpeg'
-        img_out = '/home/pi/Botty/downloads/df.jpeg'
+        img_src = '/home/pi/workspace/Botty/downloads/df_src.png'
+        img_temp = '/home/pi/workspace/Botty/downloads/df_temp.jpeg'
+        img_out = '/home/pi/workspace/Botty/downloads/df.jpeg'
         url = None
         
         url = await self.findImage(ctx, img)
@@ -185,8 +185,8 @@ class Memes(commands.Cog):
 
     @commands.command(pass_context=True)
     async def meme(self, ctx, *args):
-        img_src = '/home/pi/Botty/downloads/meme_src.png'
-        img_out = '/home/pi/Botty/downloads/meme.jpeg'
+        img_src = '/home/pi/workspace/Botty/downloads/meme_src.png'
+        img_out = '/home/pi/workspace/Botty/downloads/meme.jpeg'
 
         url = None
 

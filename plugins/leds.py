@@ -64,8 +64,8 @@ class leds(commands.Cog):
 
     @commands.command(pass_context=True)
     async def pixel(self, ctx, img=None):
-        img_src = '/home/pi/Botty/downloads/pixel_src.png'
-        img_out = '/home/pi/Botty/downloads/pixeled.png'
+        img_src = '/home/pi/workspace/Botty/downloads/pixel_src.png'
+        img_out = '/home/pi/workspace/Botty/downloads/pixeled.png'
         if img:
             url = ctx.message.content.split(' ')[1]
         else:
@@ -98,7 +98,7 @@ class leds(commands.Cog):
         message = socket.recv()
         
         #await ctx.channel.send('img currently disabled')
-        #Qsubprocess.Popen(['sudo', 'python3', '/home/pi/Botty/imports/img.py'])
+        #Qsubprocess.Popen(['sudo', 'python3', '/home/pi/workspace/Botty/imports/img.py'])
     #    image = Image.open(img_out)
     #
     #    # Configuration for the matrix
@@ -250,6 +250,6 @@ try:
     print('Established Connection: ' + got.decode("utf-8"))
     send('5')
 except Exception as e:
-    with open('/home/pi/Botty/logs/error.err', 'a') as f:
+    with open('/home/pi/workspace/Botty/logs/error.err', 'a') as f:
         f.write(f"{e}\n")
     print('Connection not established. Restart Botty if you care')
