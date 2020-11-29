@@ -1,1 +1,1 @@
-python3 /home/pi/Botty/Botty.py
+python3 /home/pi/workspace/Botty/Botty.py

@@ -15,7 +15,7 @@ class Utils(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.helpstring.append('!!audit; shows latest entries in the audit log')
-        with open('/home/pi/Botty/deps/roles.txt', 'r') as f:
+        with open('/home/pi/workspace/Botty/deps/roles.txt', 'r') as f:
             for l in f.readlines():
                 e = l.split(' ')
                 self.roles[e[0]] = e[1].replace('\n', '')
@@ -63,7 +63,7 @@ class Utils(commands.Cog):
 
     @commands.command(pass_context=True)
     async def role(self, ctx, emoji, role, msg=0):
-        with open('/home/pi/Botty/deps/roles.txt', 'a') as f:
+        with open('/home/pi/workspace/Botty/deps/roles.txt', 'a') as f:
             f.write(f'{emoji} {role}\n')
         self.roles[emoji] = role
 
@@ -98,8 +98,8 @@ class Utils(commands.Cog):
     async def update(self, ctx, emoji, newEmoji, newRole):
         global roles
         roles = {}
-        with open('/home/pi/Botty/deps/temp.txt', 'w') as fout:
-            with open('/home/pi/Botty/deps/roles.txt', 'r') as f:
+        with open('/home/pi/workspace/Botty/deps/temp.txt', 'w') as fout:
+            with open('/home/pi/workspace/Botty/deps/roles.txt', 'r') as f:
                 for l in f.readlines():
                     data = l.replace('\n', '').split(' ')
                     if data[0] == emoji:
@@ -116,5 +116,5 @@ class Utils(commands.Cog):
                         fout.write(f'{data[0]} {data[1]}\n')
                         self.roles[data[0]] = data[1]
 
-        shutil.copyfile('/home/pi/Botty/deps/temp.txt', '/home/pi/Botty/deps/roles.txt')
+        shutil.copyfile('/home/pi/workspace/Botty/deps/temp.txt', '/home/pi/workspace/Botty/deps/roles.txt')
         await ctx.message.delete()

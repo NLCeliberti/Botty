@@ -8,6 +8,8 @@ markov/*.markov
 reddit.txt
 botty_secret.txt
 stockMarket.txt
+stockMarket_back.txt
+logs/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

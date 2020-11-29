@@ -48,7 +48,7 @@ class America(commands.Cog):
 
     async def sendPic(self, ctx):
         await self.pic()
-        file = discord.File('/home/pi/Botty/downloads/pic.jpg', filename="pic.jpg")
+        file = discord.File('/home/pi/workspace/Botty/downloads/pic.jpg', filename="pic.jpg")
         await ctx.channel.send(f'{self.ypos}', file=file)
 
     async def pic(self):
@@ -58,7 +58,7 @@ class America(commands.Cog):
         camera = picamera.PiCamera()
         camera.start_preview()
         await asyncio.sleep(3)
-        camera.capture('/home/pi/Botty/downloads/pic.jpg')
+        camera.capture('/home/pi/workspace/Botty/downloads/pic.jpg')
         camera.stop_preview()
         camera.close()
         
