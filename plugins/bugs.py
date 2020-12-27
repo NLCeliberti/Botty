@@ -9,12 +9,12 @@ import redis
 
 queue = redis.StrictRedis(host='localhost', port=6379, db=0)
 pubsub = queue.pubsub()
-pubsub.subscribe('bugs')
+pubsub.subscribe('marketReturns')
 
 def send_zipped_pickle(obj):
     p = pickle.dumps(obj)
     z = zlib.compress(p)
-    return queue.publish('commands', z)
+    return queue.publish('marketCommands', z)
 
 def recv_zipped_pickle():
     z = pubsub.get_message()
@@ -28,7 +28,7 @@ class bugs(commands.Cog):
     helpEmoji = '🐛'
 
     TIMEOUT = 30 # seconds
-    TREND_UPDATES = 100
+    TREND_UPDATES = 250
     commandID = 0
     notMyCommand = {}
     

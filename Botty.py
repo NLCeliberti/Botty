@@ -97,19 +97,6 @@ async def reload(ctx, cog, newcog=False):
                 await ctx.message.add_reaction('👍')
     else:
         await ctx.channel.send('fuk u')
-'''
-'''
-@bot.event
-async def on_command_error(ctx, error):
-        if errors.CommandNotFound == type(error):
-            pass
-        elif errors.BadArgument == type(error):
-            await ctx.channel.send(random.choice(['ay learn how to fucking read dumbass', 'There is a help menu ya know', 'The only person with a worse argument than you is antivaxers, idiot.']))
-        else:
-            await ctx.message.add_reaction('💀')
-            nik = bot.get_user(175732928586842113)
-            await nik.send(f'{ctx.message.guild} :: {ctx.message.channel} :: {ctx.message.author} ::: {ctx.message.content}\n{error}')
-            await ctx.message.author.send(f'You have been reported to the authorities for botty fucking.\nError: {error}') 
 
 @bot.event
 async def on_reaction_add(reaction, user):

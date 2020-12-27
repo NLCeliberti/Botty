@@ -55,12 +55,28 @@ class Utils(commands.Cog):
             role = discord.utils.get(gld.roles, name='Citizen')
             await member.add_roles(role)
 
+    '''
+    '''
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, error):
+        if errors.CommandNotFound == type(error):
+            pass
+        elif errors.BadArgument == type(error):
+            await ctx.channel.send(random.choice(['ay learn how to fucking read dumbass', 'There is a help menu ya know', 'The only person with a worse argument than you is antivaxers, idiot.']))
+        else:
+            await ctx.message.add_reaction('💀')
+            nik = bot.get_user(175732928586842113)
+            await nik.send(f'{ctx.message.guild} :: {ctx.message.channel} :: {ctx.message.author} ::: {ctx.message.content}\n{error}')
+            await ctx.message.author.send(f'You have been reported to the authorities for botty fucking.\nError: {error}') 
+
+    '''
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         chn = self.bot.get_channel(704901570617409600)
         if member.guild.system_channel:
             await member.guild.system_channel.send(f'Welcome {member.mention}. {insult()}')
-
+    '''
+    
     @commands.command(pass_context=True)
     async def role(self, ctx, emoji, role, msg=0):
         with open('/home/pi/workspace/Botty/deps/roles.txt', 'a') as f:
